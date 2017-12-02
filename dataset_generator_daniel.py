@@ -79,7 +79,7 @@ def overlayChar(data, img):
     # Rotates the image between -10 to 10 degrees
     M = cv2.getRotationMatrix2D((32/2,32/2),180*(random.random()-.5),1)
     # NOTE: OpenCV transformation (warpAffine) Applies the transformation
-    dst = cv2.warpAffine(data[num], M, (32,32))
+    dst = cv2.warpAffine(data[12*10], M, (32,32))
 
     # NOTE: OpenCV resize transformation (handwritten character is slighly smaller than the background img)
     dst = cv2.resize(dst,(100,100),interpolation=cv2.INTER_NEAREST)
@@ -97,20 +97,25 @@ def overlayChar(data, img):
     img = colorShapeIMG(img,new_dst)
     return img,new_dst
 
-
+def genImage():
+    big_img = cv2.imread("background.png");
+    top_left = [int(random.random() * 100), int(random.random() * 100)];
+    bottom_right = [top_left[0] + 300, top_left[1] + 300];
+    img = big_img[top_left[0]:bottom_right[0], top_left[1]:bottom_right[1]];
+    return img;
 
 # Creates the alphanumeric "text" image array
 data = np.load("alphanum-hasy-data-X.npy")
 
 # Creates a black image array (height,width,rgb)
-img = np.zeros((300, 300, 3), np.uint8);
+img = genImage();
 drawSemiCircleConcaveDown(img);
 
 # Overlays the "text" image over the "visual" image + modifies the image in orientation etc.
 dst,secDST = overlayChar(data, img);
 
 cv2.namedWindow("Test",cv2.WINDOW_NORMAL)
-cv2.imshow("Test", dst);
+cv2.imshow("Test", cv2.resize(dst,(75,75),interpolation=cv2.INTER_NEAREST));
 cv2.waitKey(0);
 
 gaussian_blur = cv2.GaussianBlur(dst,(11,11),0);
@@ -125,6 +130,8 @@ cv2.waitKey(0);
 cv2.namedWindow("Test2",cv2.WINDOW_NORMAL)
 cv2.imshow("Test2",secDST)
 cv2.waitKey(0)
+
+
 
 # CREATE A SEPARATE COLOR FUNCTION
 
