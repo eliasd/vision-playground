@@ -108,9 +108,19 @@ drawSemiCircleConcaveDown(img);
 
 # Overlays the "text" image over the "visual" image + modifies the image in orientation etc.
 dst,secDST = overlayChar(data, img);
+
 cv2.namedWindow("Test",cv2.WINDOW_NORMAL)
 cv2.imshow("Test", dst);
 cv2.waitKey(0);
+
+gaussian_blur = cv2.GaussianBlur(dst,(11,11),0);
+
+cv2.namedWindow("Test",cv2.WINDOW_NORMAL)
+cv2.imshow("Test", gaussian_blur);
+cv2.waitKey(0);
+
+
+
 
 cv2.namedWindow("Test2",cv2.WINDOW_NORMAL)
 cv2.imshow("Test2",secDST)
@@ -118,6 +128,26 @@ cv2.waitKey(0)
 
 # CREATE A SEPARATE COLOR FUNCTION
 
-
 # FOR Next time:
  # Randomize Shape
+
+
+def noisy(noise_typ,image):
+    if noise_typ == "s&p":
+        row,col,ch = image.shape
+        s_vs_p = 0.5
+        amount = 0.004
+        out = image
+        # Salt mode
+        num_salt = np.ceil(amount * image.size * s_vs_p)
+        coords = [np.random.randint(0, i - 1, int(num_salt)) for i in image.shape]
+        out[coords] = 1
+#     if noise_typ == "gauss":
+#         row,col,ch= image.shape
+#         mean = 0
+#         var = 0.1
+#         sigma = var**0.5
+#         gauss = np.random.normal(mean,sigma,(row,col,ch))
+#         gauss = gauss.reshape(row,col,ch)
+#         noisy = image + gauss
+#         return noisy
