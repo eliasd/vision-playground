@@ -3,6 +3,11 @@ import cv2
 import random
 import math
 
+# NEED TO ADD THE REST OF THE CARDINAL DIRECTION TRANSFORMATIONS
+NORTH = cv2.getRotationMatrix2D((300/2,300/2),0,1)
+NORTH_EAST = cv2.getRotationMatrix2D((300/2,300/2),-45,1)
+#cardinalDirections = [NORTH,NORTH_EAST,EAST,SOUTH_EAST,SOUTH,SOUTH_WEST,WEST,NORTH_WEST]
+
 def drawRectangle(img):
     # point1 = (int(10*random.random()), int(10*random.random()))
     # point2 = (int(90 + 10*random.random()), int(90 + 10*random.random()))
@@ -26,15 +31,15 @@ def drawSemiCircleConcaveUp(img):
     endAngle=180;
     cv2.ellipse(img,center,axes,angle,startAngle,endAngle, white_color,-1);
 
+
 def drawSemiCircleConcaveDown(img):
-    white_color = (255,255,255)
     center = (150,210)
+    white_color = (255,255,255)
     axes = (125,125)
     angle = 0
     startAngle = 180
     endAngle = 360
     cv2.ellipse(img,center,axes,angle,startAngle,endAngle,white_color,-1)
-
 
 def padCharImg(data):
     padded_data = np.zeros((300,300,3),np.uint8)
@@ -75,14 +80,12 @@ def overlayChar(data, img):
     WHITE_RGB = [255,255,255]
     # Inverts the color
     data = 255-data;
-    num = int(data.shape[0]*random.random())
-    # Rotates the image between -10 to 10 degrees
-    M = cv2.getRotationMatrix2D((32/2,32/2),180*(random.random()-.5),1)
-    # NOTE: OpenCV transformation (warpAffine) Applies the transformation
-    dst = cv2.warpAffine(data[12*10], M, (32,32))
 
+    num = int(data.shape[0]*random.random())
     # NOTE: OpenCV resize transformation (handwritten character is slighly smaller than the background img)
-    dst = cv2.resize(dst,(100,100),interpolation=cv2.INTER_NEAREST)
+    dst = cv2.resize(data[num],(100,100),interpolation=cv2.INTER_NEAREST)
+
+
 
     new_dst = (dst, dst, dst)
     new_dst = np.stack(new_dst, axis=2);
@@ -95,66 +98,47 @@ def overlayChar(data, img):
     new_dst = 255-new_dst
     # Returns a random background / alphanumeric combination
     img = colorShapeIMG(img,new_dst)
-    return img,new_dst
+    return img
 
-def genImage():
+def genImage(overlay_img):
     big_img = cv2.imread("background.png");
+    # Randomly selected top left corner of the new generated image
     top_left = [int(random.random() * 100), int(random.random() * 100)];
+    # the bottom right corner
     bottom_right = [top_left[0] + 300, top_left[1] + 300];
-    img = big_img[top_left[0]:bottom_right[0], top_left[1]:bottom_right[1]];
-    return img;
+    # new random image square is cropped out
+    cropped_img = big_img[top_left[0]:bottom_right[0], top_left[1]:bottom_right[1]];
+
+
+    roi = cropped_img[0:300, 0:300]
+    #create mask
+    img2gray = cv2.cvtColor(overlay_img,cv2.COLOR_BGR2GRAY)
+    ret, mask = cv2.threshold(img2gray, 10, 255, cv2.THRESH_BINARY)
+    mask_inv = cv2.bitwise_not(mask)
+    img1_bg = cv2.bitwise_and(roi,roi,mask = mask_inv)
+    img2_fg = cv2.bitwise_and(overlay_img,overlay_img,mask = mask)
+    dst = cv2.add(img1_bg,img2_fg)
+    cropped_img[0:300, 0:300] = dst
+    return cropped_img;
 
 # Creates the alphanumeric "text" image array
 data = np.load("alphanum-hasy-data-X.npy")
-
-# Creates a black image array (height,width,rgb)
-img = genImage();
+#  Creates a black image array (height,width,rgb)
+img = np.zeros((300, 300, 3), np.uint8);
+# Draws a white shape on the black image
 drawSemiCircleConcaveDown(img);
+# Overlays the "text" image over the image
+dst = overlayChar(data, img);
 
-# Overlays the "text" image over the "visual" image + modifies the image in orientation etc.
-dst,secDST = overlayChar(data, img);
+# APPLIES A CARDINAL ORIENTATION TRANSFORMATION
+dst = cv2.warpAffine(img, NORTH_EAST, (300,300))
 
-cv2.namedWindow("Test",cv2.WINDOW_NORMAL)
-cv2.imshow("Test", cv2.resize(dst,(75,75),interpolation=cv2.INTER_NEAREST));
-cv2.waitKey(0);
+# Overlays the shape + character image on the background image
+dst = genImage(dst);
 
-gaussian_blur = cv2.GaussianBlur(dst,(11,11),0);
+# APPLIES a gaussian blur effect
+gaussian_blur = cv2.GaussianBlur(dst,(15,15),0);
 
 cv2.namedWindow("Test",cv2.WINDOW_NORMAL)
 cv2.imshow("Test", gaussian_blur);
 cv2.waitKey(0);
-
-
-
-
-cv2.namedWindow("Test2",cv2.WINDOW_NORMAL)
-cv2.imshow("Test2",secDST)
-cv2.waitKey(0)
-
-
-
-# CREATE A SEPARATE COLOR FUNCTION
-
-# FOR Next time:
- # Randomize Shape
-
-
-def noisy(noise_typ,image):
-    if noise_typ == "s&p":
-        row,col,ch = image.shape
-        s_vs_p = 0.5
-        amount = 0.004
-        out = image
-        # Salt mode
-        num_salt = np.ceil(amount * image.size * s_vs_p)
-        coords = [np.random.randint(0, i - 1, int(num_salt)) for i in image.shape]
-        out[coords] = 1
-#     if noise_typ == "gauss":
-#         row,col,ch= image.shape
-#         mean = 0
-#         var = 0.1
-#         sigma = var**0.5
-#         gauss = np.random.normal(mean,sigma,(row,col,ch))
-#         gauss = gauss.reshape(row,col,ch)
-#         noisy = image + gauss
-#         return noisy
